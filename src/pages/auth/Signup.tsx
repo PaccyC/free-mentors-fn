@@ -24,6 +24,8 @@ const initial: SignupForm = {
   bio: '', address: '', occupation: '', expertise: '',
 };
 
+const inputSx = { '& input': { fontSize: '1rem' } };
+
 export default function Signup() {
   const [form, setForm] = useState<SignupForm>(initial);
   const [error, setError] = useState('');
@@ -34,7 +36,7 @@ export default function Signup() {
   const set = (k: keyof SignupForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
@@ -49,7 +51,13 @@ export default function Signup() {
     }
   };
 
-  const field = (label: string, k: keyof SignupForm, type = 'text', required = false) => (
+  const field = (
+    label: string,
+    k: keyof SignupForm,
+    type = 'text',
+    required = false,
+    autoComplete?: string,
+  ) => (
     <TextField
       label={label}
       type={type}
@@ -57,36 +65,52 @@ export default function Signup() {
       onChange={set(k)}
       required={required}
       fullWidth
-      size="small"
+      autoComplete={autoComplete}
+      sx={inputSx}
     />
   );
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center bg-gray-50 px-4 py-10">
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-8">
-        <h1 className="text-2xl font-bold text-gray-800 mb-1">Create an account</h1>
-        <p className="text-gray-500 text-sm mb-6">Join FreeMentors today — it's free</p>
+    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 px-4 py-8">
+      <div className="w-full max-w-lg bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+        {/* Header */}
+        <div className="text-center mb-6">
+          <div className="text-4xl mb-3">🎓</div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-1">Create an account</h1>
+          <p className="text-gray-500 text-sm">Join FreeMentors today — it's free</p>
+        </div>
 
-        {error && <Alert severity="error" className="mb-4">{error}</Alert>}
+        {error && (
+          <Alert severity="error" className="mb-4" onClose={() => setError('')}>
+            {error}
+          </Alert>
+        )}
 
         <form onSubmit={handleSubmit}>
           <Grid container spacing={2}>
-            <Grid size={6}>{field('First Name', 'firstName', 'text', true)}</Grid>
-            <Grid size={6}>{field('Last Name', 'lastName', 'text', true)}</Grid>
-            <Grid size={12}>{field('Email', 'email', 'email', true)}</Grid>
-            <Grid size={12}>{field('Password', 'password', 'password', true)}</Grid>
+            <Grid size={6}>{field('First Name', 'firstName', 'text', true, 'given-name')}</Grid>
+            <Grid size={6}>{field('Last Name', 'lastName', 'text', true, 'family-name')}</Grid>
+            <Grid size={12}>{field('Email', 'email', 'email', true, 'email')}</Grid>
+            <Grid size={12}>{field('Password', 'password', 'password', true, 'new-password')}</Grid>
+
+            <Grid size={12}>
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                Profile info (optional)
+              </p>
+            </Grid>
             <Grid size={12}>{field('Occupation', 'occupation')}</Grid>
             <Grid size={12}>{field('Area of Expertise', 'expertise')}</Grid>
-            <Grid size={12}>{field('Address', 'address')}</Grid>
+            <Grid size={12}>{field('City / Address', 'address', 'text', false, 'address-level2')}</Grid>
             <Grid size={12}>
               <TextField
                 label="Bio"
                 value={form.bio}
                 onChange={set('bio')}
                 fullWidth
-                size="small"
                 multiline
                 rows={3}
+                sx={{ '& textarea': { fontSize: '1rem' } }}
+                placeholder="Tell mentors a bit about yourself..."
               />
             </Grid>
           </Grid>
@@ -96,15 +120,23 @@ export default function Signup() {
             variant="contained"
             fullWidth
             disabled={loading}
-            sx={{ backgroundColor: '#4338ca', '&:hover': { backgroundColor: '#3730a3' }, py: 1.2, mt: 2 }}
+            sx={{
+              backgroundColor: '#4338ca',
+              '&:hover': { backgroundColor: '#3730a3' },
+              py: 1.5,
+              fontSize: '1rem',
+              textTransform: 'none',
+              borderRadius: '12px',
+              mt: 2,
+            }}
           >
-            {loading ? <CircularProgress size={20} color="inherit" /> : 'Create Account'}
+            {loading ? <CircularProgress size={22} color="inherit" /> : 'Create Account'}
           </Button>
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-5">
           Already have an account?{' '}
-          <Link to="/login" className="text-indigo-600 font-medium hover:underline">
+          <Link to="/login" className="text-indigo-600 font-semibold hover:underline">
             Sign in
           </Link>
         </p>
