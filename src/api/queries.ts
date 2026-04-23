@@ -20,6 +20,7 @@ export const GET_ME = `
       id firstName lastName email bio address occupation expertise role
     }
   }
+    
 `;
 
 export const GET_MY_SESSIONS = `
