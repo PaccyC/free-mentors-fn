@@ -73,7 +73,11 @@ export default function AdminPanel() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><CircularProgress /></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <CircularProgress />
+    </div>
+  );
 
   const visibleUsers = users.filter((u) => u.id !== currentUser?.id);
   const mentorCount = visibleUsers.filter((u) => u.role === 'MENTOR').length;
@@ -128,7 +132,6 @@ export default function AdminPanel() {
                 onClick={() => setSelectedUser(u)}
                 className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-5 cursor-pointer hover:shadow-md hover:bg-gray-50 transition"
               >
-                {/* Mobile: stacked; Desktop: row */}
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm shrink-0">
                     {u.firstName[0]}{u.lastName[0]}
@@ -151,7 +154,7 @@ export default function AdminPanel() {
                       size="small"
                       onClick={(e) => { e.stopPropagation(); promoteToMentor(u.id); }}
                       disabled={actionLoading === u.id}
-                      sx={{ borderColor: '#4338ca', color: '#4338ca', fontSize: '0.7rem', textTransform: 'none', shrink: 0, whiteSpace: 'nowrap' }}
+                      sx={{ borderColor: '#4338ca', color: '#4338ca', fontSize: '0.7rem', textTransform: 'none', whiteSpace: 'nowrap', cursor: 'pointer' }}
                     >
                       {actionLoading === u.id ? '…' : 'Make Mentor'}
                     </Button>
@@ -199,7 +202,7 @@ export default function AdminPanel() {
                         color="error"
                         onClick={() => hideReview(r.id)}
                         disabled={actionLoading === r.id}
-                        sx={{ fontSize: '0.7rem', textTransform: 'none' }}
+                        sx={{ fontSize: '0.7rem', textTransform: 'none', cursor: 'pointer' }}
                       >
                         {actionLoading === r.id ? '…' : 'Hide'}
                       </Button>
@@ -213,13 +216,7 @@ export default function AdminPanel() {
       )}
 
       {/* User profile dialog */}
-      <Dialog
-        open={!!selectedUser}
-        onClose={() => setSelectedUser(null)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-      >
+      <Dialog open={!!selectedUser} onClose={() => setSelectedUser(null)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         {selectedUser && (
           <>
             <DialogTitle sx={{ pb: 1 }}>
@@ -259,11 +256,7 @@ export default function AdminPanel() {
                   fullWidth={isMobile}
                   onClick={() => promoteToMentor(selectedUser.id)}
                   disabled={actionLoading === selectedUser.id}
-                  sx={{
-                    backgroundColor: '#4338ca',
-                    '&:hover': { backgroundColor: '#3730a3' },
-                    textTransform: 'none',
-                  }}
+                  sx={{ backgroundColor: '#4338ca', '&:hover': { backgroundColor: '#3730a3' }, textTransform: 'none', cursor: 'pointer' }}
                 >
                   Make Mentor
                 </Button>
@@ -274,16 +267,12 @@ export default function AdminPanel() {
                   size="small"
                   fullWidth={isMobile}
                   onClick={() => { setSelectedUser(null); navigate(`/mentors/${selectedUser.id}`); }}
-                  sx={{ textTransform: 'none' }}
+                  sx={{ textTransform: 'none', cursor: 'pointer' }}
                 >
                   View Public Profile
                 </Button>
               )}
-              <Button
-                onClick={() => setSelectedUser(null)}
-                fullWidth={isMobile}
-                sx={{ textTransform: 'none' }}
-              >
+              <Button onClick={() => setSelectedUser(null)} fullWidth={isMobile} sx={{ textTransform: 'none', cursor: 'pointer' }}>
                 Close
               </Button>
             </DialogActions>

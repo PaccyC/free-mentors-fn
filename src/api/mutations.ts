@@ -59,7 +59,7 @@ export const ACCEPT_SESSION = `
   }
 `;
 
-export const DECLINE_SESSION = `
+export const DECLINE_SESSION =`
   mutation DeclineSession($sessionId: ID!) {
     declineSession(sessionId: $sessionId) {
       id status
@@ -79,6 +79,34 @@ export const HIDE_REVIEW = `
   mutation HideReview($reviewId: ID!) {
     hideReview(reviewId: $reviewId) {
       id isHidden
+    }
+  }
+`;
+
+export const CREATE_ADMIN = `
+  mutation CreateAdmin(
+    $adminCreationKey: String!
+    $firstName: String!
+    $lastName: String!
+    $email: String!
+    $password: String!
+    $bio: String
+    $address: String
+    $occupation: String
+    $expertise: String
+  ) {
+    createAdmin(
+      adminCreationKey: $adminCreationKey
+      firstName: $firstName
+      lastName: $lastName
+      email: $email
+      password: $password
+      bio: $bio
+      address: $address
+      occupation: $occupation
+      expertise: $expertise
+    ) {
+      id firstName lastName email role
     }
   }
 `;
