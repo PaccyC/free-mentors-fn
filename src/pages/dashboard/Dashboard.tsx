@@ -32,7 +32,11 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div className="flex justify-center py-20"><CircularProgress /></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <CircularProgress />
+    </div>
+  );
 
   const pending = sessions.filter((s) => s.status === 'PENDING').length;
   const accepted = sessions.filter((s) => s.status === 'ACCEPTED').length;

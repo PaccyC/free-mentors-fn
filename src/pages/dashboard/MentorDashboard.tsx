@@ -44,7 +44,11 @@ export default function MentorDashboard() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><CircularProgress /></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <CircularProgress />
+    </div>
+  );
 
   const pending = sessions.filter((s) => s.status === 'PENDING').length;
 

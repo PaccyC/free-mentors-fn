@@ -6,9 +6,9 @@ import {
   DialogContent, DialogActions, TextField, Rating, useMediaQuery,
 } from '@mui/material';
 import { gql } from '../../api/client';
-import { GET_MENTOR, GET_MENTOR_REVIEWS } from '../../api/queries';
+import { GET_MENTOR, GET_MENTOR_REVIEWS, GET_MY_SESSIONS } from '../../api/queries';
 import { CREATE_SESSION, REVIEW_MENTOR } from '../../api/mutations';
-import type { User, Review } from '../../types';
+import type { User, Review, MentorshipSession } from '../../types';
 import type { RootState } from '../../store';
 
 export default function MentorDetail() {
@@ -19,6 +19,7 @@ export default function MentorDetail() {
 
   const [mentor, setMentor] = useState<User | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [hasAcceptedSession, setHasAcceptedSession] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -37,17 +38,28 @@ export default function MentorDetail() {
 
   useEffect(() => {
     if (!id) return;
-    Promise.all([
+    const baseQueries: Promise<unknown>[] = [
       gql<{ mentor: User }>(GET_MENTOR, { id }),
       gql<{ mentorReviews: Review[] }>(GET_MENTOR_REVIEWS, { mentorId: id }),
-    ])
-      .then(([md, rd]) => {
-        setMentor(md.mentor);
-        setReviews(rd.mentorReviews);
+    ];
+    const queries = token
+      ? [...baseQueries, gql<{ mySessions: MentorshipSession[] }>(GET_MY_SESSIONS, {}, token)]
+      : baseQueries;
+
+    Promise.all(queries)
+      .then(([md, rd, sd]) => {
+        setMentor((md as { mentor: User }).mentor);
+        setReviews((rd as { mentorReviews: Review[] }).mentorReviews);
+        if (sd) {
+          const accepted = (sd as { mySessions: MentorshipSession[] }).mySessions.some(
+            (s) => s.mentor.id === id && s.status === 'ACCEPTED',
+          );
+          setHasAcceptedSession(accepted);
+        }
       })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
 
   const handleRequestSession = async () => {
     if (!token) { navigate('/login'); return; }
@@ -83,18 +95,25 @@ export default function MentorDetail() {
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><CircularProgress /></div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-[60vh]">
+      <CircularProgress />
+    </div>
+  );
   if (error || !mentor) return <div className="p-4 sm:p-8"><Alert severity="error">{error || 'Mentor not found'}</Alert></div>;
 
   const avgScore = reviews.length
     ? (reviews.reduce((s, r) => s + r.score, 0) / reviews.length).toFixed(1)
     : null;
 
+  const isOwnProfile = user?.id === id;
+  const canRequestSession = token && user?.role === 'USER' && !isOwnProfile;
+  const canReview = token && user?.role === 'USER' && !isOwnProfile && hasAcceptedSession;
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
       {/* Profile Card */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-8 mb-6 sm:mb-8">
-        {/* Avatar + info: side-by-side on mobile, same on larger */}
         <div className="flex items-start gap-4 sm:gap-6">
           <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xl sm:text-2xl shrink-0">
             {mentor.firstName[0]}{mentor.lastName[0]}
@@ -143,28 +162,31 @@ export default function MentorDetail() {
         )}
 
         {/* Action buttons */}
-        {token && user?.role !== 'ADMIN' && user?.id !== id && (
+        {(canRequestSession || canReview) && (
           <div className="mt-5 flex flex-col sm:flex-row gap-3">
-            <Button
-              variant="contained"
-              fullWidth={isMobile}
-              onClick={() => setSessionOpen(true)}
-              sx={{
-                backgroundColor: '#4338ca',
-                '&:hover': { backgroundColor: '#3730a3' },
-                textTransform: 'none',
-                borderRadius: '10px',
-                py: 1.2,
-              }}
-            >
-              Request Session
-            </Button>
-            {user?.role === 'USER' && (
+            {canRequestSession && (
+              <Button
+                variant="contained"
+                fullWidth={isMobile}
+                onClick={() => setSessionOpen(true)}
+                sx={{
+                  backgroundColor: '#4338ca',
+                  '&:hover': { backgroundColor: '#3730a3' },
+                  textTransform: 'none',
+                  borderRadius: '10px',
+                  py: 1.2,
+                  cursor: 'pointer',
+                }}
+              >
+                Request Session
+              </Button>
+            )}
+            {canReview && (
               <Button
                 variant="outlined"
                 fullWidth={isMobile}
                 onClick={() => setReviewOpen(true)}
-                sx={{ textTransform: 'none', borderRadius: '10px', py: 1.2 }}
+                sx={{ textTransform: 'none', borderRadius: '10px', py: 1.2, cursor: 'pointer' }}
               >
                 Leave a Review
               </Button>
@@ -172,11 +194,18 @@ export default function MentorDetail() {
           </div>
         )}
 
+        {/* Hint for users with no accepted session */}
+        {token && user?.role === 'USER' && !isOwnProfile && !hasAcceptedSession && (
+          <p className="mt-4 text-xs text-gray-400 bg-gray-50 rounded-xl p-3">
+            You need an accepted session with this mentor before leaving a review.
+          </p>
+        )}
+
         {reviewSuccess && <Alert severity="success" className="mt-4">Review submitted!</Alert>}
 
         {!token && (
           <p className="mt-4 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">
-            <button onClick={() => navigate('/login')} className="text-indigo-600 font-semibold hover:underline">
+            <button onClick={() => navigate('/login')} className="text-indigo-600 font-semibold hover:underline cursor-pointer">
               Sign in
             </button>{' '}
             to request a mentorship session.
@@ -213,13 +242,7 @@ export default function MentorDetail() {
       </div>
 
       {/* Request Session Dialog */}
-      <Dialog
-        open={sessionOpen}
-        onClose={() => setSessionOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-      >
+      <Dialog open={sessionOpen} onClose={() => setSessionOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle sx={{ fontWeight: 700 }}>Request a Mentorship Session</DialogTitle>
         <DialogContent>
           <div className="flex flex-col gap-4 pt-2">
@@ -247,21 +270,14 @@ export default function MentorDetail() {
           </div>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button
-            onClick={() => setSessionOpen(false)}
-            sx={{ textTransform: 'none', flex: isMobile ? 1 : undefined }}
-          >
+          <Button onClick={() => setSessionOpen(false)} sx={{ textTransform: 'none', flex: isMobile ? 1 : undefined, cursor: 'pointer' }}>
             Cancel
           </Button>
           <Button
             onClick={handleRequestSession}
             variant="contained"
             disabled={!questions.trim() || !scheduledAt || sessionLoading}
-            sx={{
-              backgroundColor: '#4338ca',
-              textTransform: 'none',
-              flex: isMobile ? 1 : undefined,
-            }}
+            sx={{ backgroundColor: '#4338ca', textTransform: 'none', flex: isMobile ? 1 : undefined, cursor: 'pointer' }}
           >
             {sessionLoading ? <CircularProgress size={18} color="inherit" /> : 'Send Request'}
           </Button>
@@ -269,24 +285,14 @@ export default function MentorDetail() {
       </Dialog>
 
       {/* Review Dialog */}
-      <Dialog
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        maxWidth="sm"
-        fullWidth
-        fullScreen={isMobile}
-      >
+      <Dialog open={reviewOpen} onClose={() => setReviewOpen(false)} maxWidth="sm" fullWidth fullScreen={isMobile}>
         <DialogTitle sx={{ fontWeight: 700 }}>Review {mentor.firstName}</DialogTitle>
         <DialogContent>
           <div className="flex flex-col gap-4 pt-2">
             {reviewError && <Alert severity="error">{reviewError}</Alert>}
             <div>
               <p className="text-sm text-gray-600 mb-2 font-medium">Your rating</p>
-              <Rating
-                value={score}
-                onChange={(_, v) => setScore(v || 1)}
-                size={isMobile ? 'large' : 'medium'}
-              />
+              <Rating value={score} onChange={(_, v) => setScore(v || 1)} size={isMobile ? 'large' : 'medium'} />
             </div>
             <TextField
               label="Your comment"
@@ -300,21 +306,14 @@ export default function MentorDetail() {
           </div>
         </DialogContent>
         <DialogActions sx={{ p: 2, gap: 1 }}>
-          <Button
-            onClick={() => setReviewOpen(false)}
-            sx={{ textTransform: 'none', flex: isMobile ? 1 : undefined }}
-          >
+          <Button onClick={() => setReviewOpen(false)} sx={{ textTransform: 'none', flex: isMobile ? 1 : undefined, cursor: 'pointer' }}>
             Cancel
           </Button>
           <Button
             onClick={handleReview}
             variant="contained"
             disabled={!comment.trim() || reviewLoading}
-            sx={{
-              backgroundColor: '#4338ca',
-              textTransform: 'none',
-              flex: isMobile ? 1 : undefined,
-            }}
+            sx={{ backgroundColor: '#4338ca', textTransform: 'none', flex: isMobile ? 1 : undefined, cursor: 'pointer' }}
           >
             {reviewLoading ? <CircularProgress size={18} color="inherit" /> : 'Submit Review'}
           </Button>
