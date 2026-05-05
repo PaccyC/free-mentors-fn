@@ -10,7 +10,6 @@ export async function gql<T>(
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  console.debug('[gql] url:', GRAPHQL_URL, '| operation:', query.match(/mutation\s+(\w+)/)?.[1] ?? query.match(/query\s*(\w*)/)?.[1] ?? '?');
   const { data } = await axios.post(GRAPHQL_URL, { query, variables }, { headers });
 
   if (data.errors?.length) {

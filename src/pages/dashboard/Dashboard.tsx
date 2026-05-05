@@ -19,6 +19,10 @@ const statusLabel: Record<string, string> = {
   DECLINED: 'Declined',
 };
 
+function isExpired(s: MentorshipSession) {
+  return s.status === 'PENDING' && !!s.scheduledAt && new Date(s.scheduledAt) < new Date();
+}
+
 export default function Dashboard() {
   const { token, user } = useSelector((s: RootState) => s.auth);
   const [sessions, setSessions] = useState<MentorshipSession[]>([]);
@@ -38,7 +42,7 @@ export default function Dashboard() {
     </div>
   );
 
-  const pending = sessions.filter((s) => s.status === 'PENDING').length;
+  const pending = sessions.filter((s) => s.status === 'PENDING' && !isExpired(s)).length;
   const accepted = sessions.filter((s) => s.status === 'ACCEPTED').length;
 
   return (
@@ -86,60 +90,75 @@ export default function Dashboard() {
         </div>
       ) : (
         <div className="flex flex-col gap-3 sm:gap-4">
-          {sessions.map((s) => (
-            <div
-              key={s.id}
-              className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow"
-            >
-              {/* Card header */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm shrink-0">
-                    {s.mentor.firstName[0]}{s.mentor.lastName[0]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">
-                      {s.mentor.firstName} {s.mentor.lastName}
-                    </p>
-                    <p className="text-xs sm:text-sm text-indigo-600 truncate">{s.mentor.occupation}</p>
-                    {s.scheduledAt && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        📅 {new Date(s.scheduledAt).toLocaleDateString(undefined, {
-                          weekday: 'short', month: 'short', day: 'numeric',
-                          hour: '2-digit', minute: '2-digit',
-                        })}
+          {sessions.map((s) => {
+            const expired = isExpired(s);
+            return (
+              <div
+                key={s.id}
+                className={`bg-white rounded-2xl shadow-sm border p-4 sm:p-6 hover:shadow-md transition-shadow ${
+                  expired ? 'border-gray-200 opacity-75' :
+                  s.status === 'PENDING' ? 'border-amber-200' : 'border-gray-100'
+                }`}
+              >
+                {/* Card header */}
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-sm shrink-0">
+                      {s.mentor.firstName[0]}{s.mentor.lastName[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm sm:text-base truncate">
+                        {s.mentor.firstName} {s.mentor.lastName}
                       </p>
-                    )}
+                      <p className="text-xs sm:text-sm text-indigo-600 truncate">{s.mentor.occupation}</p>
+                      {s.scheduledAt && (
+                        <p className={`text-xs mt-0.5 font-medium ${expired ? 'text-red-400' : 'text-gray-400'}`}>
+                          📅 {new Date(s.scheduledAt).toLocaleDateString(undefined, {
+                            weekday: 'short', month: 'short', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </p>
+                      )}
+                    </div>
                   </div>
+                  {expired ? (
+                    <Chip label="Expired" color="default" size="small" />
+                  ) : (
+                    <Chip
+                      label={statusLabel[s.status] ?? s.status}
+                      color={statusColor[s.status]}
+                      size="small"
+                    />
+                  )}
                 </div>
-                <Chip
-                  label={statusLabel[s.status] ?? s.status}
-                  color={statusColor[s.status]}
-                  size="small"
-                  sx={{ shrink: 0 }}
-                />
+
+                {/* Questions */}
+                <p className="text-gray-600 text-sm bg-gray-50 rounded-xl p-3 leading-relaxed line-clamp-3">
+                  {s.questions}
+                </p>
+
+                {expired && (
+                  <p className="mt-3 text-xs text-gray-400 italic">
+                    This request has expired — the scheduled time has passed.
+                  </p>
+                )}
+
+                {s.status === 'ACCEPTED' && (
+                  <div className="mt-3 flex items-center gap-2">
+                    <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <Link
+                      to={`/mentors/${s.mentor.id}`}
+                      className="text-indigo-600 text-sm font-medium hover:underline"
+                    >
+                      Leave a review for {s.mentor.firstName}
+                    </Link>
+                  </div>
+                )}
               </div>
-
-              {/* Questions */}
-              <p className="text-gray-600 text-sm bg-gray-50 rounded-xl p-3 leading-relaxed line-clamp-3">
-                {s.questions}
-              </p>
-
-              {s.status === 'ACCEPTED' && (
-                <div className="mt-3 flex items-center gap-2">
-                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <Link
-                    to={`/mentors/${s.mentor.id}`}
-                    className="text-indigo-600 text-sm font-medium hover:underline"
-                  >
-                    Leave a review for {s.mentor.firstName}
-                  </Link>
-                </div>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

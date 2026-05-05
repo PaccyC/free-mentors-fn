@@ -9,16 +9,19 @@ RUN pnpm install --frozen-lockfile
 
 COPY . .
 
-ARG VITE_GRAPHQL_URL=/graphql
+ARG VITE_GRAPHQL_URL=http://localhost:8000/graphql
 ENV VITE_GRAPHQL_URL=$VITE_GRAPHQL_URL
 
 RUN pnpm build
 
-FROM nginx:alpine
+FROM node:20-alpine
 
-COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN npm install -g serve
 
-EXPOSE 80
+WORKDIR /app
 
-CMD ["nginx", "-g", "daemon off;"]
+COPY --from=builder /app/dist ./dist
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]
